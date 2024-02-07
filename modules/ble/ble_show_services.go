@@ -347,12 +347,13 @@ func (mod *BLERecon) showServices(p gatt.Peripheral, services []*gatt.Service) {
 					if err := p.WriteCharacteristic(ch, mod.writeData, !withResponse); err != nil {
 						mod.Error("error while writing: %s", err)
 					}
+					return
 				}
 
 				sz := 0
 				raw := ([]byte)(nil)
 				err := error(nil)
-				if isReadable {
+				if !wantsToWrite && isReadable {
 					if raw, err = p.ReadCharacteristic(ch); raw != nil {
 						sz = len(raw)
 					}
