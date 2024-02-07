@@ -277,7 +277,7 @@ func parsePrivacyFlag(raw []byte) string {
 }
 
 func (mod *BLERecon) showServices(p gatt.Peripheral, services []*gatt.Service) {
-	columns := []string{"Handles", "Service > Characteristics", "Properties", "Data"}
+	columns := []string{"Handles", "Service > Characteristics", "Properties", "Data", "User Description"}
 	rows := make([][]string, 0)
 
 	wantsToWrite := mod.writeUUID != nil
@@ -306,6 +306,7 @@ func (mod *BLERecon) showServices(p gatt.Peripheral, services []*gatt.Service) {
 		row := []string{
 			fmt.Sprintf("%04x -> %04x", svc.Handle(), svc.EndHandle()),
 			name,
+			"",
 			"",
 			"",
 		}
@@ -377,6 +378,20 @@ func (mod *BLERecon) showServices(p gatt.Peripheral, services []*gatt.Service) {
 					mod.currDevice.DeviceName = data
 				}
 
+				userDescription := ""
+				if descriptors, err := p.DiscoverDescriptors(nil, ch); err == nil {
+					for _, d := range descriptors {
+
+						if d.UUID().Equal(gatt.UUID16(0x2901)) {
+							// Characteristic User Description
+							if raw, err := p.ReadDescriptor(d); err == nil {
+								userDescription = string(raw)
+							}
+							break
+						}
+					}
+				}
+
 				if multi == nil {
 					char.Data = data
 					rows = append(rows, []string{
@@ -384,6 +399,7 @@ func (mod *BLERecon) showServices(p gatt.Peripheral, services []*gatt.Service) {
 						name,
 						strings.Join(props, ", "),
 						data,
+						userDescription,
 					})
 				} else {
 					char.Data = multi
@@ -394,9 +410,10 @@ func (mod *BLERecon) showServices(p gatt.Peripheral, services []*gatt.Service) {
 								name,
 								strings.Join(props, ", "),
 								m,
+								userDescription,
 							})
 						} else {
-							rows = append(rows, []string{"", "", "", m})
+							rows = append(rows, []string{"", "", "", m, ""})
 						}
 					}
 				}
@@ -404,7 +421,7 @@ func (mod *BLERecon) showServices(p gatt.Peripheral, services []*gatt.Service) {
 				service.Characteristics = append(service.Characteristics, char)
 			}
 			// blank row after every service, bleah style
-			rows = append(rows, []string{"", "", "", ""})
+			rows = append(rows, []string{"", "", "", "", ""})
 		}
 
 		mod.currDevice.Services = append(mod.currDevice.Services, service)
